@@ -35,6 +35,43 @@ router.get("/responses", async (req, res) => {
   }
 });
 
+// Get aggregated data for occupation and favorite artist
+router.get("/results/occupation-artist", async (req, res) => {
+  try {
+    const collection = await dbService.getCollection("responses");
+
+    const aggregatedData = await collection
+      .aggregate([
+        {
+          $project: {
+            occupation: { $arrayElemAt: ["$answers", 0] }, // Q1: Occupation
+            artist: { $arrayElemAt: ["$answers", 4] },     // Q5: Favorite Artist
+          },
+        },
+        {
+          $group: {
+            _id: { occupation: "$occupation", artist: "$artist" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            occupation: "$_id.occupation",
+            artist: "$_id.artist",
+            count: 1,
+            _id: 0,
+          },
+        },
+      ])
+      .toArray();
+
+    res.status(200).json(aggregatedData);
+  } catch (error) {
+    console.error("Error fetching occupation-artist results:", error);
+    res.status(500).json({ message: "Failed to fetch occupation-artist results" });
+  }
+});
+
 // Get aggregated data for occupation and age
 router.get("/results/occupation-age", async (req, res) => {
   try {
